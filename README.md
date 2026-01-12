@@ -25,11 +25,24 @@ A modern, web-based dashboard for managing, executing, and scheduling Python scr
 
 ### 2. Run the Dashboard
 ```bash
-python main.py
+python run.py
 ```
 Visit `http://localhost:8000` in your browser.
 
-## 📂 Configuration
+## 📂 Project Structure
+This project follows a professional Python package structure:
+```text
+├── app/                  # Core application package
+│   ├── main.py           # API and lifecycle
+│   ├── core/             # Execution and scheduling engines
+│   └── models/           # Data schemas
+├── static/               # Web dashboard (HTML/CSS/JS)
+├── data/                 # Local configuration (Git ignored)
+├── run.py                # Development entry point
+└── requirements.txt      # Project dependencies
+```
+
+## 📝 Configuration
 Scripts are stored in `data/scripts.json`. The dashboard allows you to manage these through the UI.
 Example configuration:
 ```json
