@@ -2,7 +2,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import json
 import os
-from executor import executor
+from app.core.executor import executor
 
 class ScriptScheduler:
     def __init__(self, data_path: str):
@@ -15,7 +15,6 @@ class ScriptScheduler:
         self.reload_jobs()
 
     def reload_jobs(self):
-        # Remove existing jobs managed by this class
         for job_id in list(self.jobs.keys()):
             try:
                 self.scheduler.remove_job(job_id)
@@ -40,5 +39,3 @@ class ScriptScheduler:
 
     def shutdown(self):
         self.scheduler.shutdown()
-
-# We will initialize this in main.py

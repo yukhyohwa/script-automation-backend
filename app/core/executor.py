@@ -10,11 +10,9 @@ class ScriptExecutor:
     def run_script(self, script_id: str, script_path: str, params: str = ""):
         def target():
             try:
-                # Capture output
                 start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 self.logs[script_id] = f"[{start_time}] Starting script...\n"
                 
-                # Split params safely
                 args = ["python", script_path]
                 if params:
                     args.extend(params.split())

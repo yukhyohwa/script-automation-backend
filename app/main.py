@@ -3,13 +3,17 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import json
 import os
-from models import Script, ExecutionRequest
-from executor import executor
-from scheduler import ScriptScheduler
+from app.models.schemas import Script, ExecutionRequest
+from app.core.executor import executor
+from app.core.scheduler import ScriptScheduler
 
-app = FastAPI()
+app = FastAPI(title="Script Automation Backend")
 
-DATA_PATH = "data/scripts.json"
+# In a professional setup, paths are often handled by a config module
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_PATH = os.path.join(BASE_DIR, "data", "scripts.json")
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
 scheduler = ScriptScheduler(DATA_PATH)
 
 @app.on_event("startup")
@@ -20,8 +24,6 @@ async def startup_event():
 async def shutdown_event():
     scheduler.shutdown()
 
-# --- API Endpoints ---
-
 @app.get("/api/scripts")
 async def get_scripts():
     if not os.path.exists(DATA_PATH):
@@ -31,6 +33,7 @@ async def get_scripts():
 
 @app.post("/api/scripts")
 async def save_scripts(scripts: list[Script]):
+    os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
     with open(DATA_PATH, 'w', encoding='utf-8') as f:
         json.dump([s.dict() for s in scripts], f, indent=4, ensure_ascii=False)
     scheduler.reload_jobs()
@@ -57,14 +60,8 @@ async def execute_scripts(req: ExecutionRequest):
 async def get_logs(script_id: str):
     return {"logs": executor.get_logs(script_id)}
 
-# --- Static Files ---
-
 @app.get("/")
 async def read_index():
-    return FileResponse("static/index.html")
+    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
