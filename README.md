@@ -1,5 +1,10 @@
 # Script Automation Backend 🚀
 
+![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-005571?style=flat&logo=fastapi)
+![UI Style](https://img.shields.io/badge/UI-Japanese%20Minimalist-d05d5d.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+
 A modern, web-based dashboard for managing, executing, and scheduling Python scripts.
 
 ## ✨ Features
