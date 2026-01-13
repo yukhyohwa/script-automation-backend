@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,21 +8,25 @@
     <link rel="stylesheet" href="/static/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Noto+Sans+JP:wght@300;400;500&family=Fira+Code&display=swap"
+        rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
+
 <body>
     <div class="container">
         <header>
             <div class="logo-area">
                 <h1>Script Center</h1>
-                <p style="font-size: 0.8rem; color: #94a3b8; margin: 0;">Automation & Execution Hub</p>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0; margin-top: 4px;">Automation &
+                    Execution Hub</p>
             </div>
-            <div class="header-actions">
+            <div class="header-actions" style="display: flex; align-items: center; gap: 12px;">
                 <button class="btn btn-outline" onclick="showModal()">
                     <i data-lucide="plus"></i> Add Script
                 </button>
-                <button class="btn btn-primary" onclick="executeSelected()" style="margin-top: 10px;">
+                <button class="btn btn-primary" onclick="executeSelected()">
                     <i data-lucide="play"></i> Run Selected
                 </button>
             </div>
@@ -34,7 +39,7 @@
 
     <div id="addModal" class="add-modal">
         <div class="modal-content">
-            <h2 style="margin-top: 0;">Add New Script</h2>
+            <h2 id="modalTitle" style="margin-top: 0;">Add New Script</h2>
             <div class="controls">
                 <div class="input-group">
                     <label>ID (Unique)</label>
@@ -56,8 +61,12 @@
                     <label>Schedule (Cron) - Optional</label>
                     <input type="text" id="newSchedule" placeholder="0 10 * * *">
                 </div>
+                <div class="input-group">
+                    <label>Report Directory - Optional</label>
+                    <input type="text" id="newReportDir" placeholder="C:\path\to\output">
+                </div>
                 <div class="actions">
-                    <button class="btn btn-primary" onclick="addScript()">Save Script</button>
+                    <button class="btn btn-primary" onclick="saveScript()">Save Script</button>
                     <button class="btn btn-outline" onclick="hideModal()">Cancel</button>
                 </div>
             </div>
@@ -66,6 +75,35 @@
 
     <div id="toast">Changes saved!</div>
 
+    <div id="reportModal" class="add-modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">Script Reports</h2>
+                <button class="btn btn-outline" onclick="hideReportModal()" style="padding: 5px 10px;">Close</button>
+            </div>
+            <div id="reportList" class="report-list">
+                <!-- Reports will be listed here -->
+            </div>
+        </div>
+    </div>
+
+    <div id="deleteConfirmModal" class="add-modal">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <i data-lucide="alert-triangle"
+                style="width: 48px; height: 48px; color: var(--primary); margin-bottom: 20px;"></i>
+            <h2 style="margin-top: 0;">Are you sure?</h2>
+            <p style="color: var(--text-muted); margin-bottom: 30px;">This action cannot be undone. All logs for this
+                script will
+                be lost.</p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button id="confirmDeleteBtn" class="btn btn-primary" style="background: var(--primary);">Confirm
+                    Delete</button>
+                <button class="btn btn-outline" onclick="hideDeleteModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/script.js"></script>
 </body>
+
 </html>

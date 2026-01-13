@@ -1,6 +1,8 @@
 let scripts = [];
+let isSaving = false;
 
 async function loadScripts() {
+    if (isSaving) return;
     const res = await fetch('/api/scripts');
     scripts = await res.json();
     renderGrid();
@@ -10,7 +12,10 @@ function renderGrid() {
     const grid = document.getElementById('scriptGrid');
     grid.innerHTML = '';
 
-    scripts.forEach(s => {
+    // Only show enabled scripts (Soft Delete/Logic Delete)
+    const visibleScripts = scripts.filter(s => s.enabled !== false);
+
+    visibleScripts.forEach(s => {
         const card = document.createElement('div');
         card.className = 'script-card';
         card.innerHTML = `
@@ -35,11 +40,17 @@ function renderGrid() {
                     <button class="btn btn-primary" onclick="runOne('${s.id}')">
                         <i data-lucide="play-circle"></i> Run Now
                     </button>
-                    <button class="btn btn-outline" onclick="showLogs('${s.id}')">
+                    <button class="btn btn-outline" onclick="toggleLogs('${s.id}')">
                         <i data-lucide="terminal"></i> Logs
                     </button>
-                    <button class="btn btn-outline" onclick="deleteScript('${s.id}')">
-                        <i data-lucide="trash-2" style="color: #ef4444"></i>
+                    <button class="btn btn-outline" onclick="showReports('${s.id}')" ${s.report_dir ? '' : 'disabled'} title="${s.report_dir ? 'View Reports' : 'No report directory configured'}">
+                        <i data-lucide="file-text"></i> Reports
+                    </button>
+                    <button class="btn btn-outline btn-icon btn-edit-hover" onclick="editScript('${s.id}')" title="Edit Config">
+                        <i data-lucide="edit" style="width: 18px; height: 18px;"></i>
+                    </button>
+                    <button class="btn btn-outline btn-icon btn-danger-hover" onclick="deleteScript('${s.id}')" title="Delete Script">
+                        <i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>
                     </button>
                 </div>
             </div>
@@ -59,12 +70,17 @@ async function updateScript(id, field, value) {
 }
 
 async function saveToServer() {
-    await fetch('/api/scripts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(scripts)
-    });
-    showToast();
+    isSaving = true;
+    try {
+        await fetch('/api/scripts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(scripts)
+        });
+        showToast();
+    } finally {
+        isSaving = false;
+    }
 }
 
 async function runOne(id) {
@@ -90,47 +106,148 @@ async function executeSelected() {
     showToast(`Running ${selected.length} scripts...`);
 }
 
+async function toggleLogs(id) {
+    const container = document.getElementById(`logs-${id}`);
+    if (container.style.display === 'block') {
+        container.style.display = 'none';
+        return;
+    }
+    showLogs(id);
+}
+
 async function showLogs(id) {
     const container = document.getElementById(`logs-${id}`);
     container.style.display = 'block';
-    
+
     async function fetchLogs() {
         if (container.style.display === 'none') return;
         const res = await fetch(`/api/logs/${id}`);
         const data = await res.json();
         container.textContent = data.logs;
         container.scrollTop = container.scrollHeight;
+        if (data.logs.includes("Script finished")) return;
         setTimeout(fetchLogs, 2000);
     }
     fetchLogs();
 }
 
-function showModal() { document.getElementById('addModal').style.display = 'flex'; }
+async function showReports(id) {
+    const modal = document.getElementById('reportModal');
+    const list = document.getElementById('reportList');
+    list.innerHTML = 'Loading...';
+    modal.style.display = 'flex';
+
+    const res = await fetch(`/api/reports/${id}`);
+    const reports = await res.json();
+
+    if (reports.length === 0) {
+        list.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">No reports found in the configured directory.</div>';
+        return;
+    }
+
+    list.innerHTML = reports.map(r => `
+        <div class="report-item" onclick="window.open('/api/reports/${id}/${r.name}', '_blank')">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="file"></i>
+                <div>
+                    <div style="font-weight: 600; color: var(--text-main);">${r.name}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">${new Date(r.mtime * 1000).toLocaleString()} • ${(r.size / 1024).toFixed(1)} KB</div>
+                </div>
+            </div>
+            <i data-lucide="external-link" style="width: 16px; height: 16px;"></i>
+        </div>
+    `).join('');
+    lucide.createIcons();
+}
+
+function hideReportModal() {
+    document.getElementById('reportModal').style.display = 'none';
+}
+
+function showModal(isEdit = false) {
+    document.getElementById('addModal').style.display = 'flex';
+    document.getElementById('modalTitle').textContent = isEdit ? 'Edit Script' : 'Add New Script';
+    if (!isEdit) {
+        // Clear inputs for new script
+        document.getElementById('newId').value = '';
+        document.getElementById('newId').disabled = false;
+        document.getElementById('newName').value = '';
+        document.getElementById('newPath').value = '';
+        document.getElementById('newParams').value = '';
+        document.getElementById('newSchedule').value = '';
+        document.getElementById('newReportDir').value = '';
+    }
+}
 function hideModal() { document.getElementById('addModal').style.display = 'none'; }
 
-async function addScript() {
+function editScript(id) {
+    console.log("Opening edit modal for:", id);
+    const s = scripts.find(x => x.id === id);
+    if (!s) {
+        console.error("Script not found in memory!", id);
+        return;
+    }
+
+    document.getElementById('newId').value = s.id;
+    document.getElementById('newId').disabled = true; // ID should be unique/immutable
+    document.getElementById('newName').value = s.name || '';
+    document.getElementById('newPath').value = s.path || '';
+    document.getElementById('newParams').value = s.params || '';
+    document.getElementById('newSchedule').value = s.schedule || '';
+    document.getElementById('newReportDir').value = s.report_dir || '';
+
+    showModal(true);
+}
+
+async function saveScript() {
+    const id = document.getElementById('newId').value;
+    const isEdit = scripts.some(x => x.id === id);
+    const existing = scripts.find(x => x.id === id);
+
     const newS = {
-        id: document.getElementById('newId').value,
+        id: id,
         name: document.getElementById('newName').value,
         path: document.getElementById('newPath').value,
         params: document.getElementById('newParams').value,
         schedule: document.getElementById('newSchedule').value,
-        enabled: true
+        report_dir: document.getElementById('newReportDir').value,
+        enabled: isEdit ? existing.enabled : true
     };
-    
+
     if (!newS.id || !newS.path) return alert("ID and Path are required");
-    
-    scripts.push(newS);
+
+    if (isEdit) {
+        const index = scripts.findIndex(x => x.id === id);
+        scripts[index] = newS;
+    } else {
+        scripts.push(newS);
+    }
+
     await saveToServer();
     hideModal();
     loadScripts();
 }
 
 async function deleteScript(id) {
-    if (!confirm("Really delete?")) return;
-    scripts = scripts.filter(s => s.id !== id);
-    await saveToServer();
-    renderGrid();
+    const modal = document.getElementById('deleteConfirmModal');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    modal.style.display = 'flex';
+
+    confirmBtn.onclick = async () => {
+        console.log("Delete confirmed for:", id);
+        const script = scripts.find(s => s.id === id);
+        if (script) {
+            script.enabled = false;
+            await saveToServer();
+            modal.style.display = 'none';
+            renderGrid();
+            showToast("Script hidden successfully!");
+        }
+    };
+}
+
+function hideDeleteModal() {
+    document.getElementById('deleteConfirmModal').style.display = 'none';
 }
 
 function showToast(msg = "Changes saved!") {

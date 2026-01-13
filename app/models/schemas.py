@@ -7,6 +7,7 @@ class Script(BaseModel):
     path: str
     params: Optional[str] = ""
     schedule: Optional[str] = ""
+    report_dir: Optional[str] = ""
     enabled: bool = True
 
 class ExecutionRequest(BaseModel):

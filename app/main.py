@@ -60,6 +60,42 @@ async def execute_scripts(req: ExecutionRequest):
 async def get_logs(script_id: str):
     return {"logs": executor.get_logs(script_id)}
 
+@app.get("/api/reports/{script_id}")
+async def list_reports(script_id: str):
+    scripts = await get_scripts()
+    script = next((s for s in scripts if s["id"] == script_id), None)
+    if not script or not script.get("report_dir"):
+        return []
+    
+    report_dir = script["report_dir"]
+    if not os.path.exists(report_dir):
+        return []
+    
+    files = []
+    for f in os.listdir(report_dir):
+        if os.path.isfile(os.path.join(report_dir, f)):
+            files.append({
+                "name": f,
+                "mtime": os.path.getmtime(os.path.join(report_dir, f)),
+                "size": os.path.getsize(os.path.join(report_dir, f))
+            })
+    # Sort by mtime descending (newest first)
+    files.sort(key=lambda x: x["mtime"], reverse=True)
+    return files
+
+@app.get("/api/reports/{script_id}/{filename}")
+async def get_report_file(script_id: str, filename: str):
+    scripts = await get_scripts()
+    script = next((s for s in scripts if s["id"] == script_id), None)
+    if not script or not script.get("report_dir"):
+        raise HTTPException(status_code=404, detail="Script or report directory not found")
+    
+    file_path = os.path.join(script["report_dir"], filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    return FileResponse(file_path)
+
 @app.get("/")
 async def read_index():
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
