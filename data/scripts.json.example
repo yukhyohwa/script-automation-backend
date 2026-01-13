@@ -1,0 +1,11 @@
+[
+  {
+    "id": "example-script",
+    "name": "Example Automation Script",
+    "path": "C:\\scripts\\main.py",
+    "params": "--env prod --verbose",
+    "schedule": "0 10 * * *",
+    "report_dir": "C:\\scripts\\reports",
+    "enabled": true
+  }
+]
