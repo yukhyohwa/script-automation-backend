@@ -9,6 +9,7 @@ class Script(BaseModel):
     schedule: Optional[str] = ""
     report_dir: Optional[str] = ""
     enabled: bool = True
+    batch_selected: bool = False
 
 class ExecutionRequest(BaseModel):
     script_ids: List[str]

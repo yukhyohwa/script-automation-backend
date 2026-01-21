@@ -1,5 +1,6 @@
 let scripts = [];
 let isSaving = false;
+const activeMonitoring = new Set(); // Tracks scripts being monitored for completion
 
 async function loadScripts() {
     if (isSaving) return;
@@ -26,7 +27,7 @@ function renderGrid() {
             <div class="path-text">${s.path}</div>
             <div class="controls">
                 <div class="input-group">
-                    <label><input type="checkbox" class="select-script" value="${s.id}" style="width: auto;"> Select for batch run</label>
+                    <label><input type="checkbox" class="select-script" value="${s.id}" style="width: auto;" ${s.batch_selected ? 'checked' : ''} onchange="updateScript('${s.id}', 'batch_selected', this.checked)"> Select for batch run</label>
                 </div>
                 <div class="input-group">
                     <label>Params</label>
@@ -84,26 +85,58 @@ async function saveToServer() {
 }
 
 async function runOne(id) {
+    const s = scripts.find(x => x.id === id);
     const params = document.getElementById(`params-${id}`).value;
     await fetch('/api/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ script_ids: [id], custom_params: params })
     });
-    showLogs(id);
-    showToast("Execution started!");
+    showToast(`Script "${s ? s.name : id}" is executing...`);
+    monitorScript(id);
 }
 
 async function executeSelected() {
-    const selected = Array.from(document.querySelectorAll('.select-script:checked')).map(cb => cb.value);
-    if (selected.length === 0) return alert("Select at least one script");
+    const selectedIds = Array.from(document.querySelectorAll('.select-script:checked')).map(cb => cb.value);
+    if (selectedIds.length === 0) return alert("Select at least one script");
 
     await fetch('/api/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script_ids: selected })
+        body: JSON.stringify({ script_ids: selectedIds })
     });
-    showToast(`Running ${selected.length} scripts...`);
+
+    selectedIds.forEach(id => {
+        const s = scripts.find(x => x.id === id);
+        showToast(`Script "${s ? s.name : id}" started...`);
+        monitorScript(id);
+    });
+}
+
+function monitorScript(id) {
+    if (activeMonitoring.has(id)) return;
+    activeMonitoring.add(id);
+
+    const checkStatus = async () => {
+        const res = await fetch(`/api/logs/${id}`);
+        const data = await res.json();
+        const s = scripts.find(x => x.id === id);
+
+        // Update logs if the panel is open
+        const container = document.getElementById(`logs-${id}`);
+        if (container && container.style.display === 'block') {
+            container.textContent = data.logs;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        if (data.logs.includes("Script finished")) {
+            activeMonitoring.delete(id);
+            showToast(`✅ Script "${s ? s.name : id}" has finished!`);
+            return;
+        }
+        setTimeout(checkStatus, 2000);
+    };
+    checkStatus();
 }
 
 async function toggleLogs(id) {
@@ -119,16 +152,8 @@ async function showLogs(id) {
     const container = document.getElementById(`logs-${id}`);
     container.style.display = 'block';
 
-    async function fetchLogs() {
-        if (container.style.display === 'none') return;
-        const res = await fetch(`/api/logs/${id}`);
-        const data = await res.json();
-        container.textContent = data.logs;
-        container.scrollTop = container.scrollHeight;
-        if (data.logs.includes("Script finished")) return;
-        setTimeout(fetchLogs, 2000);
-    }
-    fetchLogs();
+    // Ensure it's being monitored so logs update
+    monitorScript(id);
 }
 
 async function showReports(id) {
@@ -211,7 +236,8 @@ async function saveScript() {
         params: document.getElementById('newParams').value,
         schedule: document.getElementById('newSchedule').value,
         report_dir: document.getElementById('newReportDir').value,
-        enabled: isEdit ? existing.enabled : true
+        enabled: isEdit ? existing.enabled : true,
+        batch_selected: isEdit ? existing.batch_selected : false
     };
 
     if (!newS.id || !newS.path) return alert("ID and Path are required");
@@ -251,10 +277,19 @@ function hideDeleteModal() {
 }
 
 function showToast(msg = "Changes saved!") {
-    const t = document.getElementById('toast');
+    const container = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 'toast-msg';
     t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 3000);
+    container.appendChild(t);
+
+    // Auto-remove after some time
+    setTimeout(() => {
+        t.style.opacity = '0';
+        t.style.transform = 'translateX(20px)';
+        t.style.transition = 'all 0.5s ease';
+        setTimeout(() => t.remove(), 500);
+    }, 4000);
 }
 
 loadScripts();
