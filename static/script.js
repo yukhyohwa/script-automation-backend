@@ -30,10 +30,6 @@ function renderGrid() {
                     <label><input type="checkbox" class="select-script" value="${s.id}" style="width: auto;" ${s.batch_selected ? 'checked' : ''} onchange="updateScript('${s.id}', 'batch_selected', this.checked)"> Select for batch run</label>
                 </div>
                 <div class="input-group">
-                    <label>Params</label>
-                    <input type="text" id="params-${s.id}" value="${s.params || ''}" onchange="updateScript('${s.id}', 'params', this.value)">
-                </div>
-                <div class="input-group">
                     <label>Schedule (Cron)</label>
                     <input type="text" id="schedule-${s.id}" value="${s.schedule || ''}" onchange="updateScript('${s.id}', 'schedule', this.value)" placeholder="e.g. 0 12 * * *">
                 </div>
@@ -86,11 +82,10 @@ async function saveToServer() {
 
 async function runOne(id) {
     const s = scripts.find(x => x.id === id);
-    const params = document.getElementById(`params-${id}`).value;
     await fetch('/api/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script_ids: [id], custom_params: params })
+        body: JSON.stringify({ script_ids: [id], custom_params: s ? s.params : "" })
     });
     showToast(`Script "${s ? s.name : id}" is executing...`);
     monitorScript(id);

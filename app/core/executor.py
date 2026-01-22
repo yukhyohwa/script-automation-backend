@@ -17,11 +17,16 @@ class ScriptExecutor:
                 if params:
                     args.extend(params.split())
                 
+                env = os.environ.copy()
+                env["PYTHONUTF8"] = "1"
+                
                 process = subprocess.Popen(
                     args,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     text=True,
+                    encoding='utf-8',
+                    env=env,
                     cwd=os.path.dirname(script_path)
                 )
                 
